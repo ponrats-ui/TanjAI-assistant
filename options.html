@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TanjAI Settings - ปรับแต่งน้องแทนใจ</title>
+  <style>
+    :root {
+      --primary: #FF7A1A;
+      --primary-light: #FFF4EB;
+      --primary-hover: #FF6600;
+      --accent-cyan: #00F2FE;
+      --accent-pink: #FF4D79;
+      --bg: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --text-main: #1E293B;
+      --text-muted: #64748B;
+      --border-color: #E2E8F0;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.04);
+      --shadow-hover: 0 16px 36px rgba(255, 122, 26, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Prompt", "Kanit", sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(255, 154, 77, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 85%, rgba(0, 242, 254, 0.07) 0%, transparent 40%);
+      color: var(--text-main);
+      padding: 40px 20px;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 860px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding: 24px;
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-soft);
+      border: 1px solid var(--border-color);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo {
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #FF944D, #FF5500);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 18px rgba(255, 102, 0, 0.28);
+    }
+
+    .brand-logo img {
+      width: 36px;
+      height: 36px;
+    }
+
+    .brand-title h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.3px;
+    }
+
+    .brand-title p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #ECFDF5;
+      color: #059669;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid #A7F3D0;
+    }
+
+    .status-dot-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 8px #10B981;
+    }
+
+    /* Gamification: Usage Level Progress */
+    .usage-level-card {
+      background: linear-gradient(135deg, #F0F4FF, #EBF5FF);
+      border: 1.5px solid #BFD7FF;
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .usage-level-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .level-badge {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #6EA8FE, #3B82F6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+      color: #FFF;
+      font-weight: 800;
+      font-size: 11px;
+      gap: 1px;
+    }
+
+    .level-badge .lv-num {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .usage-info h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1D4ED8;
+    }
+
+    .usage-info p {
+      font-size: 12.5px;
+      color: #3B82F6;
+      margin-top: 2px;
+    }
+
+    .usage-progress-wrap {
+      flex: 1;
+      max-width: 260px;
+    }
+
+    .usage-progress-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #1D4ED8;
+      margin-bottom: 6px;
+    }
+
+    .usage-bar-bg {
+      width: 100%;
+      height: 10px;
+      background: #DBEAFE;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .usage-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #60A5FA, #2563EB);
+      border-radius: 5px;
+      transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Unlocked Content Grid */
+    .unlocked-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .unlock-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .unlock-chip.locked {
+      opacity: 0.5;
+      filter: grayscale(1);
+    }
+
+    .unlock-chip-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    /* Gamification Affection Bar */
+    .affection-card {
+      background: linear-gradient(135deg, #FFF0F5, #FFF6F0);
+      border: 1.5px solid #FFCCD5;
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .affection-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .affection-avatar {
+      font-size: 32px;
+      width: 52px;
+      height: 52px;
+      background: #FFF;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(255, 105, 180, 0.2);
+    }
+
+    .affection-title h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #D6336C;
+    }
+
+    .affection-title p {
+      font-size: 12.5px;
+      color: #868E96;
+      margin-top: 2px;
+    }
+
+    .affection-progress-wrap {
+      flex: 1;
+      max-width: 260px;
+      margin-left: 20px;
+    }
+
+    .affection-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #C2255C;
+      margin-bottom: 6px;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 10px;
+      background: #FFE3EC;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 20%;
+      background: linear-gradient(90deg, #FF6B8B, #FF8E53);
+      border-radius: 5px;
+      transition: width 0.4s ease;
+    }
+
+    /* Section Cards */
+    .section-card {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid var(--border-color);
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    /* 3-Avatar Style Selector Grid */
+    .avatar-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .avatar-card {
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 20px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      background: #FAFAFC;
+    }
+
+    .avatar-card:hover {
+      transform: translateY(-4px);
+      border-color: #FFB380;
+      box-shadow: var(--shadow-hover);
+      background: #FFFBF7;
+    }
+
+    .avatar-card.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      box-shadow: 0 10px 24px rgba(255, 122, 26, 0.2);
+    }
+
+    .avatar-card .check-icon {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .avatar-card.active .check-icon {
+      display: flex;
+    }
+
+    .avatar-preview-box {
+      width: 84px;
+      height: 84px;
+      margin: 0 auto 14px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    .avatar-preview-1 {
+      background: linear-gradient(135deg, #FFD29D, #FF7A1A);
+    }
+    .avatar-preview-2 {
+      background: linear-gradient(135deg, #FFC2D1, #845EC2);
+    }
+    .avatar-preview-3 {
+      background: linear-gradient(135deg, #1E1E2E, #E0115F);
+      border: 2px solid #00F2FE;
+    }
+
+    .avatar-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .avatar-model-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-family: monospace;
+      color: #718096;
+      background: rgba(0, 0, 0, 0.05);
+      padding: 3px 8px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .avatar-tagline {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Gemini Settings Row */
+    .input-gemini-key {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 13.5px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-gemini-key:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(255, 122, 26, 0.15);
+    }
+
+    /* Settings Rows */
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid #EDF2F7;
+    }
+
+    .setting-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .setting-info h4 {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .setting-info p {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .setting-control select {
+      padding: 8px 14px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 13.5px;
+      outline: none;
+      background: #FFF;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .stat-box {
+      background: #F8FAFC;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .stat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: #FFE8D6;
+      color: #E65A00;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .stat-val {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .stat-lbl {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Footer & Save Button */
+    .footer-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .btn-save {
+      background: linear-gradient(135deg, #FF944D, #FF5500);
+      color: #FFF;
+      border: none;
+      border-radius: 14px;
+      padding: 12px 28px;
+      font-size: 14.5px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(255, 102, 0, 0.3);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .btn-save:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px rgba(255, 102, 0, 0.4);
+    }
+
+    /* Toast Notification */
+    #save-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #10B981;
+      color: #FFF;
+      padding: 12px 22px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      font-weight: 600;
+      box-shadow: 0 10px 24px rgba(16, 185, 129, 0.35);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      z-index: 10000;
+    }
+
+    @media (max-width: 700px) {
+      .avatar-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .affection-card { flex-direction: column; align-items: flex-start; gap: 14px; }
+      .affection-progress-wrap { max-width: 100%; margin-left: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="brand-logo">
+          <img src="assets/icon48.png" alt="TanjAI Icon">
+        </div>
+        <div class="brand-title">
+          <h1>น้องแทนใจ (TanjAI) Settings</h1>
+          <p>3D Virtual AI Companion & Productivity Assistant</p>
+        </div>
+      </div>
+      <div class="badge-status">
+        <span class="status-dot-pulse"></span>
+        <span>ระบบพร้อมทำงาน</span>
+      </div>
+    </header>
+
+    <!-- Usage Level Progress Card -->
+    <div class="usage-level-card" id="usage-level-card">
+      <div class="usage-level-left">
+        <div class="level-badge">
+          <span class="lv-num" id="usage-level-num">1</span>
+          <span>LV</span>
+        </div>
+        <div class="usage-info">
+          <h3 id="usage-level-title">⭐ Usage Level 1</h3>
+          <p id="usage-level-subtitle">ใช้งานร่วมกัน 0 นาที | เลเวลหน้า: 600 นาที</p>
+        </div>
+      </div>
+      <div class="usage-progress-wrap">
+        <div class="usage-progress-labels">
+          <span>ความคืบหน้า Lv.Up</span>
+          <span id="usage-progress-text">0 / 600 นาที</span>
+        </div>
+        <div class="usage-bar-bg">
+          <div class="usage-bar-fill" id="usage-bar-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gamification: Affection Level Card -->
+    <div class="affection-card">
+      <div class="affection-left">
+        <div class="affection-avatar">💖</div>
+        <div class="affection-title">
+          <h3 id="affection-level-text">ความสนิทระดับ: Level 1</h3>
+          <p>ยิ่งพูดคุยและทำงานด้วยกัน น้องแทนใจจะยิ่งรักและเอาใจใส่คุณมากขึ้น!</p>
+        </div>
+      </div>
+      <div class="affection-progress-wrap">
+        <div class="affection-labels">
+          <span>ความผูกพัน (EXP)</span>
+          <span id="affection-exp-text">0 / 100</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="affection-progress-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. Avatar Style Selector -->
+    <section class="section-card">
+      <div class="section-title">
+        <span>✨</span> เลือกสไตล์ตัวละคร (3-Avatar Style Selector)
+      </div>
+      <p class="section-desc">
+        เลือกสไตล์น้องแทนใจที่คุณชื่นชอบ ระบบจะสลับไฟล์โมเดลและเอนจินเรนเดอร์ให้โดยอัตโนมัติ
+      </p>
+
+      <div class="avatar-grid">
+        <!-- Style 1: Orange Mascot -->
+        <div class="avatar-card active" data-style="orange_mascot">
+          <span class="check-icon">✓</span>
+          <div class="avatar-preview-box avatar-preview-1">
+            <span>🍊</span>
+          </div>
+          <div class="avatar-name">Orange Mascot</div>
+          <span class="avatar-model-tag">3D Orange Clay Model</span>
+          <div class="avatar-tagline">
+            น้องแทนใจ มาสคอตส้มสดใส สไตล์ 3D Clay ดินน้ำมันอบอุ่น น่ารักนุ่มนวล
+          </div>
+        </div>
+
+        <!-- Style 2: Anime Girl -->
+        <div class="avatar-card" data-style="anime_girl">
+          <span class="check-icon">✓</span>
+          <div class="avatar-preview-box avatar-preview-2">
+            <span>👧</span>
+          </div>
+          <div class="avatar-name">Anime Girl</div>
+          <span class="avatar-model-tag">Live2D / Canvas Anime</span>
+          <div class="avatar-tagline">
+            น้องทวินเทล สไตล์สาวน้อยอนิเมะโมเอะ ขี้เล่น มีชีวิตชีวา สดใสในทุกมุมมอง
+          </div>
+        </div>
+
+        <!-- Style 3: Cyber Redhair -->
+        <div class="avatar-card" data-style="cyber_redhair">
+          <span class="check-icon">✓</span>
+          <div class="avatar-preview-box avatar-preview-3">
+            <span>🤖</span>
+          </div>
+          <div class="avatar-name">Cyber Redhair</div>
+          <span class="avatar-model-tag">3D Cyber Redhair Model</span>
+          <div class="avatar-tagline">
+            น้องไซเบอร์ สาวผมแดงสุดคูลลุคไซเบอร์พังก์ พร้อมชุดนีออนล้ำสมัย
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Costume & Item Switcher (Unlocked by Level) -->
+    <section class="section-card">
+      <div class="section-title">
+        <span>👗</span> ตู้เสื้อผ้า & คอสตูม (Costume Switcher - ปลดล็อกตาม Level)
+      </div>
+      <p class="section-desc">
+        สลับชุดแต่งกายและไอเทมพิเศษที่ปลดล็อกได้จากเวลาการใช้งานเคียงข้างกัน (ทุกๆ 600 นาที = 1 Level)
+      </p>
+
+      <div class="avatar-grid" id="costume-grid">
+        <!-- Costume 1: Default -->
+        <div class="avatar-card active" data-costume="default">
+          <span class="check-icon">✓</span>
+          <div class="avatar-preview-box" style="background: linear-gradient(135deg, #FFE8D6, #FF944D);">
+            <span>👚</span>
+          </div>
+          <div class="avatar-name">Casual Outfit</div>
+          <span class="avatar-model-tag" style="color: #059669; background: #ECFDF5;">ปลดล็อกแล้ว (Lv.1)</span>
+          <div class="avatar-tagline">ชุดลำลองเสื้อเชิ้ตขาวผูกโบว์ส้มสดใส สบายตา</div>
+        </div>
+
+        <!-- Costume 2: Cyber Glow -->
+        <div class="avatar-card" data-costume="cyber_neon" id="card-costume-cyber_neon">
+          <span class="check-icon">✓</span>
+          <div class="avatar-preview-box" style="background: linear-gradient(135deg, #1E1E2E, #00F2FE);">
+            <span>🥽</span>
+          </div>
+          <div class="avatar-name">Cyber Glow Suit</div>
+          <span class="avatar-model-tag" id="tag-costume-cyber_neon">ปลดล็อกที่ Lv.2</span>
+          <div class="avatar-tagline">สูทไซเบอร์พังก์เรืองแสงนีออน พร้อมหูฟังไซเบอร์</div>
+        </div>
+
+        <!-- Costume 3: Star Idol -->
+        <div class="avatar-card" data-costume="idol_dress" id="card-costume-idol_dress">
+          <span class="check-icon">✓</span>
+          <div class="avatar-preview-box" style="background: linear-gradient(135deg, #FFC2D1, #845EC2);">
+            <span>🌟</span>
+          </div>
+          <div class="avatar-name">Star Idol Dress</div>
+          <span class="avatar-model-tag" id="tag-costume-idol_dress">ปลดล็อกที่ Lv.3</span>
+          <div class="avatar-tagline">ชุดเวทีไอดอลประกายดาว โบว์ระยิบระยับสไตล์ K-Pop</div>
+        </div>
+
+        <!-- Costume 4: Angel Wings -->
+        <div class="avatar-card" data-costume="angel_wings" id="card-costume-angel_wings">
+          <span class="check-icon">✓</span>
+          <div class="avatar-preview-box" style="background: linear-gradient(135deg, #FFF9DB, #F59F00);">
+            <span>🪽</span>
+          </div>
+          <div class="avatar-name">Golden Angel Wings</div>
+          <span class="avatar-model-tag" id="tag-costume-angel_wings">ปลดล็อกที่ Lv.5</span>
+          <div class="avatar-tagline">ปีกทูตสวรรค์และมงกุฎสีทองส่องประกายออร่าอบอุ่น</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Gemini Brain Integration -->
+    <section class="section-card">
+      <div class="section-title">
+        <span>🧠</span> ระบบสมองอัจฉริยะ Google Gemini (AI Brain)
+      </div>
+      <p class="section-desc">
+        เชื่อมต่อ Gemini API เพื่อให้น้องแทนใจเข้าใจคำพูดภาษาไทยที่ซับซ้อน และตอบกลับอย่างมีชีวิตชีวา (หากเว้นว่างไว้ ระบบจะใช้ Local Engine อัตโนมัติ)
+      </p>
+
+      <div style="margin-top: 14px;">
+        <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; color: var(--text-main);">
+          Gemini API Key (Google AI Studio):
+        </label>
+        <input type="password" id="input-gemini-key" class="input-gemini-key" placeholder="AIzaSy..." autocomplete="off">
+        <p style="font-size: 11.5px; color: var(--text-muted); margin-top: 6px;">
+          รับ API Key ฟรีได้จาก <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary);">Google AI Studio</a> (เก็บไว้เฉพาะในเครื่องของคุณอย่างปลอดภัย)
+        </p>
+      </div>
+    </section>
+
+    <!-- 3. Long-term Memory Storage -->
+    <section class="section-card">
+      <div class="section-title">
+        <span>📖</span> ความทรงจำระยะยาว (Long-term Memory)
+      </div>
+      <p class="section-desc">
+        เรื่องราว ความชอบ และสิ่งที่น้องแทนใจจดจำเกี่ยวกับคุณจากการสนทนา
+      </p>
+
+      <div style="margin-top: 12px;">
+        <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; color: var(--text-main);">
+          ชื่อที่น้องแทนใจเรียกคุณ:
+        </label>
+        <input type="text" id="input-user-name" class="input-gemini-key" placeholder="พี่คนเก่ง" style="max-width: 320px;">
+      </div>
+
+      <div style="margin-top: 16px;">
+        <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; color: var(--text-main);">
+          สิ่งที่น้องแทนใจจดจำได้ (Memory Facts):
+        </label>
+        <ul id="memory-facts-list" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px;">
+          <li style="font-size: 12.5px; color: var(--text-muted); background: #F8FAFC; padding: 8px 12px; border-radius: 8px; border: 1px solid #E2E8F0;">
+            กำลังโหลดความทรงจำ...
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 4. Companion Behavior Settings -->
+    <section class="section-card">
+      <div class="section-title">
+        <span>⚙️</span> พฤติกรรมและการตอบสนอง (Companion Preferences)
+      </div>
+      <p class="section-desc">ปรับจังหวะการเคลื่อนไหวและการแจ้งเตือนสุขภาพ</p>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <h4>ระยะเวลาก่อนเริ่มเต้น (Idle Dance Timeout)</h4>
+          <p>เมื่อไม่มีการขยับเมาส์เกินเวลาที่กำหนด น้องแทนใจจะเริ่มเต้นโยกตัวอัตโนมัติ</p>
+        </div>
+        <div class="setting-control">
+          <select id="select-dance-timeout">
+            <option value="3" selected>3 วินาที (ค่าเริ่มต้น)</option>
+            <option value="5">5 วินาที</option>
+            <option value="10">10 วินาที</option>
+            <option value="30">30 วินาที</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <h4>การแจ้งเตือนพักสายตา & ดื่มน้ำ (Health Alarm)</h4>
+          <p>เตือนให้พักมองไกล 20 วินาที และจิบน้ำ เพื่อสุขภาพดวงตาและร่างกายที่ดี</p>
+        </div>
+        <div class="setting-control">
+          <select id="select-eye-rest">
+            <option value="30">ทุก 30 นาที</option>
+            <option value="60" selected>ทุก 60 นาที (แนะนำ)</option>
+            <option value="90">ทุก 90 นาที</option>
+            <option value="120">ทุก 120 นาที</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <h4>สิทธิ์การใช้งานไมโครโฟน (Microphone Permission)</h4>
+          <p>จำเป็นสำหรับการสั่งการด้วยเสียงภาษาไทยในทุกหน้าเว็บ</p>
+        </div>
+        <div class="setting-control" style="display: flex; align-items: center; gap: 10px;">
+          <span id="mic-status-badge" style="font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 8px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;">กำลังตรวจสอบ...</span>
+          <button type="button" id="btn-reopen-welcome" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 8px; cursor: pointer;">
+            🎙️ ตั้งค่าสิทธิ์ไมค์
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Productivity & Usage Stats -->
+    <section class="section-card">
+      <div class="section-title">
+        <span>📊</span> สถิติการใช้งานเคียงข้างกัน (Companion Statistics)
+      </div>
+      <p class="section-desc">ข้อมูลระยะเวลาที่คุณมีน้องแทนใจร่วมเคียงข้างการทำงาน</p>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-icon">⏱️</div>
+          <div>
+            <div class="stat-val" id="stat-minutes">0</div>
+            <div class="stat-lbl">เวลาต่อเนื่อง (Continuous Min)</div>
+          </div>
+        </div>
+
+        <div class="stat-box">
+          <div class="stat-icon">🌟</div>
+          <div>
+            <div class="stat-val" id="stat-total-minutes">0</div>
+            <div class="stat-lbl">เวลาใช้งานรวมทั้งหมด (Total Min)</div>
+          </div>
+        </div>
+
+        <div class="stat-box">
+          <div class="stat-icon">🎙️</div>
+          <div>
+            <div class="stat-val" id="stat-commands">0</div>
+            <div class="stat-lbl">จำนวนคำสั่งเสียงที่สำเร็จ (ครั้ง)</div>
+          </div>
+        </div>
+
+        <div class="stat-box">
+          <div class="stat-icon">⭐</div>
+          <div>
+            <div class="stat-val" id="stat-user-level">1</div>
+            <div class="stat-lbl">ระดับ Usage Level (ทุก 600 นาที)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Unlocked Dance Styles & Rewards -->
+    <section class="section-card">
+      <div class="section-title">
+        <span>💃</span> สไตล์เต้น & รางวัลที่ปลดล็อก (Unlocked Dance Styles)
+      </div>
+      <p class="section-desc">สไตล์เต้นที่ปลดล็อกแล้วสามารถใช้ได้ผ่านปุ่ม Beat-Sync (ทุกๆ 600 นาที จะปลดล็อกใหม่)</p>
+
+      <div class="unlocked-grid" id="unlocked-dances-grid">
+        <div class="unlock-chip" id="dance-kpop_idol">
+          <span class="unlock-chip-icon">💃</span>
+          <div>
+            <div style="font-weight:700">K-Pop Idol Dance</div>
+            <div style="font-size:11px;color:#059669;margin-top:2px">✓ ปลดล็อกแล้ว (Lv.1)</div>
+          </div>
+        </div>
+        <div class="unlock-chip locked" id="dance-chinese_club">
+          <span class="unlock-chip-icon">🎧</span>
+          <div>
+            <div style="font-weight:700">Chinese Club DJ</div>
+            <div style="font-size:11px;color:#64748B;margin-top:2px" id="tag-dance-chinese_club">🔒 ปลดล็อกที่ Lv.2</div>
+          </div>
+        </div>
+        <div class="unlock-chip locked" id="dance-thai_coyote">
+          <span class="unlock-chip-icon">💃</span>
+          <div>
+            <div style="font-weight:700">Thai Coyote Dance</div>
+            <div style="font-size:11px;color:#64748B;margin-top:2px" id="tag-dance-thai_coyote">🔒 ปลดล็อกที่ Lv.3</div>
+          </div>
+        </div>
+        <div class="unlock-chip locked" id="dance-viral_tiktok">
+          <span class="unlock-chip-icon">📱</span>
+          <div>
+            <div style="font-weight:700">Viral TikTok</div>
+            <div style="font-size:11px;color:#64748B;margin-top:2px" id="tag-dance-viral_tiktok">🔒 ปลดล็อกที่ Lv.4</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer Save Actions -->
+    <div class="footer-actions">
+      <button class="btn-save" id="btn-save-settings">💾 บันทึกการตั้งค่า</button>
+    </div>
+  </div>
+
+  <div id="save-toast">
+    <span>✓</span> บันทึกการตั้งค่าและอัปเดตน้องแทนใจเรียบร้อยแล้วค่า!
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

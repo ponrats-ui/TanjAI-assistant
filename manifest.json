@@ -1,0 +1,65 @@
+{
+  "manifest_version": 3,
+  "name": "TanjAI - 3D Virtual AI Companion",
+  "short_name": "TanjAI",
+  "version": "1.0.0",
+  "description": "น้องแทนใจ (TanjAI) - 3D Virtual AI Girl & Productivity Companion บนเบราว์เซอร์ พร้อมระบบสบตามองตามเมาส์ และสั่งการด้วยเสียงภาษาไทย",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "scripting",
+    "storage",
+    "alarms",
+    "offscreen"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "assets/three.min.js",
+        "assets/GLTFLoader.js",
+        "content.js"
+      ],
+      "css": [
+        "overlay.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_title": "TanjAI Assistant Settings",
+    "default_popup": "options.html",
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/*",
+        "assets/models/*",
+        "overlay.css"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

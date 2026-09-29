@@ -1,0 +1,12 @@
+# Dev tooling / local preview harness (ไม่ใช่ส่วนของ extension)
+.freebuff/
+_tanjai_preview.html
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & temp
+*.log
+*.tmp
