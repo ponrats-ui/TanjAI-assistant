@@ -10,3 +10,22 @@ desktop.ini
 # Logs & temp
 *.log
 *.tmp
+
+# Python / Blender workflow caches & backups
+__pycache__/
+*.py[cod]
+*.blend1
+*.blend2
+
+# Blender MCP bridge scripts (local-only harness, ไม่ shipp กับ extension)
+_bridge_log.txt
+_mcp_bridge_start.bat
+_mcp_bridge_start.py
+_mcp_bridge_stop.py
+_mcp_*.py
+
+# Local QA output galleries (render probe scripts เก็บภาพ/ผลรันที่นี่)
+_demo_stills/
+demo/
+stills/
+_p0*/
