@@ -1355,15 +1355,20 @@
     loadedCostume = costumeName || "default";
     // [ASSETS] ไฟล์โมเดลแนว Anime Girl 3D (มีดวงตา + Eye Texture + Morph Targets ชัดเจน)
     // [DEFAULT] Anime Twin-Tails เป็นโมเดลหลัก: anime_twintails.glb -> anime_girl.glb -> anime_girl_eyes.glb
-    const animeGirlFiles = ["anime_twintails.glb", "anime_girl.glb", "anime_girl_eyes.glb"];
+    // [P04 PIPELINE] tanjai_prototype.glb = export จาก docs/TANJAI_P04_PIPELINE.md
+    // (armature + ARKit/VRM shape keys + PBR baked). วางไว้ลำดับแรกของทุกสไตล์ ถ้าไฟล์ยังไม่อยู่
+    // loader จะกระโดดข้ามไปไฟล์ถัดไปและตกลง procedural fallback โดยอัตโนมัติ — drop-in ไม่ต้องแก้โค้ด
+    const PROTOTYPE_FILE = "tanjai_prototype.glb";
+    const animeGirlFiles = [PROTOTYPE_FILE, "anime_twintails.glb", "anime_girl.glb", "anime_girl_eyes.glb"];
     // [REALISTIC] โมเดลคนเสมือนจริง (Photorealistic Human) — เป้าหมายหลักของสไตล์ realistic
-    const realisticFiles = ["realistic_tanjai.glb"];
+    const realisticFiles = [PROTOTYPE_FILE, "realistic_tanjai.glb"];
 
     const styleFiles = {
-      orange_mascot: ["orange_mascot.glb"],
+      orange_mascot: [PROTOTYPE_FILE, "orange_mascot.glb"],
       anime_girl: animeGirlFiles,
       anime_twintails: animeGirlFiles,
-      cyber_redhair: ["cyber_redhair.glb"],
+      cyber_redhair: [PROTOTYPE_FILE, "cyber_redhair.glb"],
+      prototype: [PROTOTYPE_FILE],
       realistic: realisticFiles
     };
 
@@ -1454,6 +1459,22 @@
     };
 
     tryLoad(0);
+  }
+
+  /**
+   * [P04 PIPELINE] loadTanjAIModel — โหลดโปรโตไทป์ทั้งหมดจาก assets/models/tanjai_prototype.glb
+   * รันผ่าน pipeline สรุปเอง:
+   *  1. THREE.GLTFLoader (โหลดล่วงหน้าจาก manifest content_scripts ก่อน content.js)
+   *  2. THREE.AnimationMixer + playAnimation crossfade ของคลิป idle/talk/think/listen/dance
+   *  3. traverse หา bone ที่ชื่อมี "head"/"neck" แล้ว cache ไว้ให้ระบบ mouse-tracking
+   *  4. cache mesh ที่มี morphTargetDictionary ไว้ให้ setTanjAIExpression (EMOTION_BLENDSHAPES)
+   *  5. upgradeGLBMaterials — อัปเกรด mat ทุกชิ้นเป็น MeshPhysicalMaterial
+   *     (roughness/metalness/clearcoat/sheen + SSS-approx สำหรับ realistic)
+   * ก่อนเพิ่มเข้า scene — หาก GLB ไม่อยู่ จะตกลง Procedural Chibi โดยอัตโนมัติ
+   * @returns {void}
+   */
+  function loadTanjAIModel() {
+    return loadAvatarModel("prototype", state.costume || "default");
   }
 
   // ==========================================
