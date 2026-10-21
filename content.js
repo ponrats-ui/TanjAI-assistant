@@ -58,28 +58,32 @@
       cssClass: "tanjai-glow-sunset",
       rimA: { color: 0xff7a00, intensity: 1.8 },  // ส้มไซเบอร์
       rimB: { color: 0x00e5ff, intensity: 1.2 },  // ฟ้าสว่าง
-      cuteFill: { color: 0xffd9e8, intensity: 0.6 }
+      cuteFill: { color: 0xffd9e8, intensity: 0.6 },
+      baseGlow: 0xff7a1a // [Aura] สีไฟใต้ฐาน idle — Tangerine
     },
     // น้องทวินเทลสายคาวาอี้ — Sakura Neon
     anime_girl: {
       cssClass: "tanjai-glow-sakura",
       rimA: { color: 0xff7a00, intensity: 1.6 },
       rimB: { color: 0xff4fa3, intensity: 1.5 },  // ชมพูนีออน
-      cuteFill: { color: 0xffe3f0, intensity: 0.75 }
+      cuteFill: { color: 0xffe3f0, intensity: 0.75 },
+      baseGlow: 0xff6aa8 // [Aura] สีไฟใต้ฐาน idle — Sakura Pink
     },
     // น้องไซเบอร์สายเกมเมอร์ — Neon Arcade
     cyber_redhair: {
       cssClass: "tanjai-glow-neon",
       rimA: { color: 0xff7a00, intensity: 2.1 },
       rimB: { color: 0x00e5ff, intensity: 1.7 },
-      cuteFill: { color: 0xd9f6ff, intensity: 0.7 }
+      cuteFill: { color: 0xd9f6ff, intensity: 0.7 },
+      baseGlow: 0x00e5ff // [Aura] สีไฟใต้ฐาน idle — Cyber Cyan
     },
     // น้องคนเสมือนจริง — Cinematic Portrait (แสงนุ่มสมจริง น้อยลง เน้นมิติบนใบหน้า)
     realistic: {
       cssClass: "tanjai-glow-cinematic",
       rimA: { color: 0xffb27a, intensity: 1.1 },  // ส้มอุ่นแบบแสงสตูดิโอ
       rimB: { color: 0xbfd9ff, intensity: 0.9 },   // ฟ้านวลแบบแสงเงาลิปส์
-      cuteFill: { color: 0xffe8e0, intensity: 0.5 }
+      cuteFill: { color: 0xffe8e0, intensity: 0.5 },
+      baseGlow: 0xffb27a // [Aura] สีไฟใต้ฐาน idle — Warm Studio
     }
   };
   // โทน Glow ฐานของทุกสไตล์ (CSS) — ส้ม-ชมพู-นีออน
@@ -108,6 +112,18 @@
     thinking: { rimA: 0.45, rimB: 0.6, fill: 0.55, pulse: 0, cssClass: "tanjai-mood-think" },  // คิด: หรี่ลงเบาๆ
     blushing: { rimA: 0.7, rimB: 1.6, fill: 1.6, pulse: 0.35, cssClass: "tanjai-mood-blush" }  // เขิน: ชมพูนีออนล้น
   };
+
+  // [STATE AURA] สีแสง Base Glow (PointLight ใต้ฐานโมเดล) ตามสถานะการทำงาน — เปลี่ยนผ่าน updateTanjAIState()
+  // idle = null → คืนสีเดิมตามสไตล์ตัวละคร (ฟิลด์ baseGlow ใน LIGHT_PRESETS)
+  const STATE_AURA_COLORS = {
+    listening: 0x00e5ff, // ฟ้า — กำลังฟังคำสั่ง
+    thinking:  0xffaa00, // ส้ม — ประมวลผลคำสั่ง
+    speaking:  0xff7ab8, // ชมพูสว่าง — กำลังพูดตอบ
+    browsing:  0x00ff88, // เขียว — กำลังควบคุมเบราว์เซอร์/ค้นเว็บ
+    idle:      null
+  };
+  const AURA_STATE_KEYS = Object.keys(STATE_AURA_COLORS);
+  let currentAuraState = "idle";
 
   const state = {
     avatarStyle: "anime_girl", // [DEFAULT] Anime Twin-Tails เป็นตัวหลัก ('orange_mascot' | 'anime_girl' | 'cyber_redhair')
@@ -152,7 +168,7 @@
     targetExposure: null // [CINEMATIC] exposure เป้าหมายต่อสไตล์ (null = ไม่ต้อง lerp)
   };
   let rimLightA = null, rimLightB = null, cuteFillLightRef = null;
-  let hemiLightRef = null, keyLightRef = null;
+  let hemiLightRef = null, keyLightRef = null, baseGlowLight = null;
   // [RACE FIX] เก็บสไตล์/ชุดที่โหลดจริงล่าสุด เทียบกับ storage callback ที่มาช้า
   let loadedAvatarStyle = null, loadedCostume = null;
   let moodBaseA = 1.8, moodBaseB = 1.2, moodBaseFill = 0.6;
@@ -327,6 +343,12 @@
       <div class="tanjai-musical-notes" id="tanjai-dance-notes">♪ ♫ ♬</div>
       <canvas id="tanjai-three-canvas"></canvas>
     </div>
+
+    <!-- Live Subtitle Box (สถานะ + ข้อความสั้น ใต้ฐานตัวละคร) -->
+    <div class="tanjai-subtitle" id="tanjai-subtitle" aria-live="polite"></div>
+
+    <!-- Direct Text Command (Chatbox) — พิมพ์สั่งได้เลยโดยไม่ต้องใช้เสียง -->
+    <input type="text" id="tanjai-chat-input" class="tanjai-chat-input" placeholder="พิมพ์สั่งแทนใจตรงนี้..." autocomplete="off">
   `;
 
   document.body.appendChild(root);
@@ -340,6 +362,8 @@
   const micBtn = document.getElementById("tanjai-mic-btn");
   const danceNotes = document.getElementById("tanjai-dance-notes");
   const canvasWrapper = document.getElementById("tanjai-canvas-wrapper");
+  const subtitleBox = document.getElementById("tanjai-subtitle");
+  const chatInput = document.getElementById("tanjai-chat-input");
   const toggleBubbleBtn = document.getElementById("tanjai-toggle-bubble-btn");
   const affectionBadge = document.getElementById("tanjai-affection-badge");
   const beatSyncBar = document.getElementById("tanjai-beat-sync-bar");
@@ -482,6 +506,13 @@
     cuteFillLight.position.set(0, 1.5, 2.4);
     scene.add(cuteFillLight);
 
+    // 5) Base Glow Aura — PointLight ใต้ฐานโมเดล (เปลี่ยนสีตามสถานะ: ฟ้า/ส้ม/ชมพู/เขียว ผ่าน updateTanjAIState)
+    //    ตำแหน่งต่ำเหนือพื้นเล็กน้อย + เยื้องหน้า ให้แสงลามขึ้นชายเสื้อเหมือนแท่นเรืองแสง
+    const baseGlowAuraLight = new THREE.PointLight(0xff6aa8, 0.9, 4.5);
+    baseGlowAuraLight.position.set(0, 0.12, 0.7);
+    scene.add(baseGlowAuraLight);
+    baseGlowLight = baseGlowAuraLight;
+
     // [CINEMATIC] Hemisphere Sky/Ground — ลดความกระด้างของเงา ให้เปลี่ยนสีอย่างนุ่มนวล
     // (สไตล์ realistic จะถูก preset จูน intensity เป็น 0.75 / สไตล์อนิเมะใช้ 0.25)
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.25);
@@ -530,6 +561,12 @@
     if (cuteFillLightRef) {
       cuteFillLightRef.color.setHex(preset.cuteFill.color);
       if (immediate) cuteFillLightRef.intensity = preset.cuteFill.intensity;
+    }
+
+    // [STATE AURA] โหมด idle ให้ไฟใต้ฐานเปลี่ยนตามสี preset ของสไตล์ใหม่
+    // (สถานะอื่นเช่น listening/thinking ให้ updateTanjAIState เป็นผู้จัดการเอง)
+    if (baseGlowLight && currentAuraState === "idle") {
+      baseGlowLight.color.setHex(preset.baseGlow || 0xff7a1a);
     }
 
     // [CINEMATIC] สไตล์ realistic: Key Light มุมเฉียง 45° + Hemisphere ลดความกระด้างของเงา
@@ -599,6 +636,70 @@
     }
   }
 
+  // ==========================================================================
+  // [3.3] State Aura Engine — Live Subtitle Box + ไฟใต้ฐานเปลี่ยนสีตามสถานะ
+  //       listening ฟ้า / thinking ส้ม / speaking ชมพู / browsing เขียว / idle สีเดิม
+  // ==========================================================================
+
+  let subtitleHideTimer = null;
+
+  /**
+   * อัปเดตสถานะการทำงานของน้องแทนใจ:
+   *  1) แสดงข้อความใน Live Subtitle Box ใต้ฐานตัวละคร (+ ขอบเรืองแสงตามสถานะ)
+   *  2) เปลี่ยนสี PointLight (Base Glow) ใต้ฐานโมเดล 3D ตามสถานะ
+   * @param {string} newState 'listening' | 'thinking' | 'speaking' | 'browsing' | 'idle'
+   * @param {string} [message] ข้อความสั้นๆ ที่จะแสดงในกล่อง subtitle
+   */
+  function updateTanjAIState(newState, message) {
+    // หมายเหตุ: พารามิเตอร์ตั้งชื่อ newState (ไม่ใช่ state) เพื่อไม่ทับ object `state` ของโมดูล
+    // กันชื่อสถานะผิด → ตกไป idle (สีเดิมตามสไตล์)
+    currentAuraState = AURA_STATE_KEYS.indexOf(newState) !== -1 ? newState : "idle";
+
+    // [1] Subtitle Box — ข้อความ + ขอบสีตามสถานะ
+    if (subtitleBox) {
+      if (subtitleHideTimer) { clearTimeout(subtitleHideTimer); subtitleHideTimer = null; }
+      AURA_STATE_KEYS.forEach((key) => subtitleBox.classList.remove(`state-${key}`));
+      subtitleBox.classList.add(`state-${currentAuraState}`);
+      if (message) subtitleBox.textContent = message;
+      subtitleBox.classList.add("visible");
+
+      // โหมด idle แสดงค้างไว้ 4 วิ แล้วค่อยๆ จางหาย (สถานะอื่นค้างไว้จนกว่าสถานะจะเปลี่ยน)
+      if (currentAuraState === "idle") {
+        subtitleHideTimer = setTimeout(() => {
+          subtitleBox.classList.remove("visible");
+          subtitleHideTimer = null;
+        }, message ? 4000 : 0);
+      }
+    }
+
+    // [2] Base Glow PointLight ใต้ฐานโมเดล 3D
+    if (baseGlowLight) {
+      const auraColor = STATE_AURA_COLORS[currentAuraState];
+      if (auraColor != null) {
+        baseGlowLight.color.setHex(auraColor);
+        baseGlowLight.intensity = 1.35;
+      } else {
+        // idle → สีเดิมตาม preset ของสไตล์ตัวละคร
+        const preset = LIGHT_PRESETS[moodLight.activePreset] || LIGHT_PRESETS[DEFAULT_PRESET_KEY];
+        baseGlowLight.color.setHex(preset.baseGlow || 0xff7a1a);
+        baseGlowLight.intensity = 0.9;
+      }
+    }
+
+    console.log(`${T_TAG} [Aura] state=${currentAuraState}${message ? ` — ${message}` : ""}`);
+  }
+
+  // คำสั่งที่เป็น "งานเบราว์เซอร์" → ไฟใต้ฐานเขียว (Executing/Browsing)
+  const BROWSER_AURA_ACTIONS = new Set(["OPEN_TAB", "CLOSE_TAB", "SCROLL", "SEARCH", "PLAY_MUSIC", "SUMMARIZE_PAGE", "WEB_SEARCH"]);
+
+  /** ตรวจว่า response จาก background เป็นงานควบคุมเบราว์เซอร์หรือไม่ (ดูทั้ง intent ใหม่และ action แบบ legacy) */
+  function isBrowserActionResponse(response) {
+    if (!response) return false;
+    const intent = String(response.intent || "").toUpperCase();
+    if (intent === "BROWSER_CONTROL" || intent === "WEB_SEARCH") return true;
+    return BROWSER_AURA_ACTIONS.has(String(response.action || "").toUpperCase());
+  }
+
   /**
    * [OPT] disposeCharacterRoot — Properly dispose all Three.js objects to prevent memory leaks
    * คืนคืน GPU Memory พร้อม Geometries + Materials + Textures ทุกครั้งที่มีการสลับ Avatar
@@ -642,6 +743,7 @@
     procArmR = null;
     procFloatingHeart = null;
     glbMorphMeshes = [];
+    expressionTargetsMap.clear(); // [EMOTION] ระงับพวก morph ที่ถูก dispose
 
     console.log(`${T_TAG} [Dispose] คืนคืน GPU Memory: ${geoCount} geo, ${matCount} mat, ${texCount} tex`);
   }
@@ -982,6 +1084,7 @@
     procEyes = [];
     procWings = [];
     glbMorphMeshes = [];
+    expressionTargetsMap.clear();
 
     // 1. กำหนด Color Palette ตาม Avatar Style
     let skinColor = 0xFFF5EE;
@@ -1304,6 +1407,7 @@
           characterRoot = gltf.scene;
           characterRoot.position.set(0, 0, 0);
           glbMorphMeshes = [];
+          expressionTargetsMap.clear(); // [EMOTION] ล้างเป้าหมายเก่าก่อนเก็บ morph ของโมเดลใหม่
 
           characterRoot.traverse((child) => {
             if (child.isBone || child.isMesh) {
@@ -1544,6 +1648,7 @@
 
     updateEyeBlinking();
     updateBeatAnalysis();
+    updateExpressionSmoothing(); // [EMOTION] smooth อิทธิพล blendshape ทุกเฟรม
 
     // ตรวจสอบ Idle State > 3s
     const idleDuration = (Date.now() - state.lastInteractionTime) / 1000;
@@ -1780,13 +1885,44 @@
   // ==========================================
   // [8] Text-to-Speech (TTS Engine - th-TH)
   // ==========================================
+  // [CUTE FEMALE TTS] Thai female voice selector — หาเสียงหญิงไทยที่น่ารักที่สุด
+  // หมายเหตุ: Chrome อาจยังไม่ preload รายชื่อเสียงจนกว่าจะเรียก getVoices() ครั้งแรก
+  // → cache เสียงที่เลือกไว้ และรีเฟรช cache อัตโนมัติหลัง onvoiceschanged
+  const TTS_VOICE_PRIORITY = ["premwadee", "pattara", "google", "female", "หญิง"];
+  let cachedThaiVoice = null;
+
+  function pickThaiFemaleVoice() {
+    if (!window.speechSynthesis) return null;
+    const voices = window.speechSynthesis.getVoices() || [];
+    if (!voices.length) return null;
+    const thVoices = voices.filter((v) => (v.lang || "").toLowerCase().startsWith("th"));
+    if (!thVoices.length) return null;
+    // 1) คัดลำดับตามชื่อเสียงที่ตั้งไว้: Premwadee / Pattara / Google (เสียงไทย default ของ Google)
+    for (const key of TTS_VOICE_PRIORITY) {
+      const hit = thVoices.find((v) => (v.name || "").toLowerCase().includes(key));
+      if (hit) return hit;
+    }
+    // 2) ถ้าจับชื่อเสมาไม่ได้ ใช้เสียงแรกของ locale ไทย
+    return thVoices[0];
+  }
+
   if (window.speechSynthesis) {
     window.speechSynthesis.onvoiceschanged = () => {
-      window.speechSynthesis.getVoices();
+      cachedThaiVoice = pickThaiFemaleVoice();
     };
   }
 
-  function speakThaiText(text, onStart, onEnd) {
+  /**
+   * [8] speakTanjAI — TTS น้องแทนใจแบบ cute/energetic (th-TH)
+   *  - เลือกเสียงหญิงไทยอัตโนมัติ (cache ไว้ เลือกใหม่เมื่อ voices เปล่ยน)
+   *  - pitch 1.35 + rate 1.1 = เสียงน่ารักเรียงเงาเร็วเมาส์
+   *  - ผูก State-Aura: กำลังพูด → "speaking", พูดจบ → กลับ "listening" (ถ้า 30s Active Window เปิด) หรือ "idle"
+   *    (ข้อยกเว้น: ถ้าผู้เรียกส่ง onStart/onEnd มา = ผู้เรียกจัดการ Aura เอง — ไม่ต้องแทรก)
+   * @param {string} text ข้อความที่จะให้น้องแทนใจพูด
+   * @param {function} [onStart] callback ตอนเริ่มพูด (จัดการ aura เองถ้าส่งมา)
+   * @param {function} [onEnd] callback ตอนพูดเสร็จ/เกิด error
+   */
+  function speakTanjAI(text, onStart, onEnd) {
     if (!window.speechSynthesis) {
       if (onStart) onStart();
       if (onEnd) onEnd();
@@ -1805,33 +1941,51 @@
       return;
     }
 
+    if (!cachedThaiVoice) cachedThaiVoice = pickThaiFemaleVoice();
+
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = "th-TH";
-    utterance.pitch = 1.18;
-    utterance.rate = 1.05;
-
-    const voices = window.speechSynthesis.getVoices();
-    const thaiVoice = voices.find((v) => v.lang.toLowerCase().includes("th"));
-    if (thaiVoice) {
-      utterance.voice = thaiVoice;
+    // [CUTE] เสียงน่ารักสดใส — pitch สูงขึ้นแบบเสียงเด็ก + rate เร็วแบบ energetic
+    utterance.pitch = 1.35;
+    utterance.rate = 1.1;
+    if (cachedThaiVoice) {
+      utterance.voice = cachedThaiVoice;
     }
+
+    // [STATE-AURA] ผู้เรียกส่ง onStart/onEnd มาครบ = เค้าจัดการ state เอง (เช่น sendCommandToBackground)
+    const callerManagesAura = !!(onStart && onEnd);
 
     utterance.onstart = () => {
       state.isSpeaking = true;
+      if (!callerManagesAura) {
+        updateTanjAIState("speaking", cleanText);
+      }
       if (onStart) onStart();
     };
 
     utterance.onend = () => {
       state.isSpeaking = false;
+      if (!callerManagesAura) {
+        // กลับไปโหมดฟังถ้า 30s Active Window ยังเปิด ไม่งั้นกลับ idle
+        updateTanjAIState(isActiveMode ? "listening" : "idle");
+      }
       if (onEnd) onEnd();
     };
 
     utterance.onerror = () => {
       state.isSpeaking = false;
+      if (!callerManagesAura) {
+        updateTanjAIState(isActiveMode ? "listening" : "idle");
+      }
       if (onEnd) onEnd();
     };
 
     window.speechSynthesis.speak(utterance);
+  }
+
+  // [LEGACY ALIAS] เรียกชื่อเดิมจากทุกจุดที่ใช้มาก่อน — พฤติกรรมเดียวกับ speakTanjAI
+  function speakThaiText(text, onStart, onEnd) {
+    speakTanjAI(text, onStart, onEnd);
   }
 
   // ==========================================
@@ -1871,14 +2025,21 @@
 
   // [WAKE-WORD] ระบบเรียกชื่อ "แทนใจ" — ฟังตลอดเวลา (Always-On Standby)
   // wakeWordEnabled   = โหมดฟังตลอดเวลาเปิดอยู่
-  // isAwaitingCommand = ตอบรับ "คะ?" แล้ว กำลังรอประโยคคำสั่ง
+  // isActiveMode    = [30s Active Window] เปิดอยู่ — พูดคำสั่งต่อได้โดยไม่ต้องเรียกชื่อซ้ำ
   const WAKE_WORD_PATTERN = /แทนใจ|ทานใจ|ทานจาย|tanjai|tan\s?jai/i;
+  // [INTERRUPTIBLE TTS] คำสั่งหยุดเสียงขณะ AI กำลังพูด — ตรวจเฉพาะประโยคสั้นๆ (≤15 ตัวอักษร)
+  // เพื่อกัน echo ของประโยค TTS เองที่บังเอิญมีคำว่า "หยุด" แทรกอยู่
+  const TTS_STOP_PATTERN = /หยุด|พอแล้ว|พอก่อน|เงียบ|หยุดพูด/i;
   const WAKE_ACKS = ["คะ?", "ว่าไงคะ?", "คะ ให้แทนใจช่วยอะไรดีคะ"]; 
   let wakeWordEnabled = false;
-  let isAwaitingCommand = false;
-  let pendingCommandTimer = null;
   let skipWakeRestart = false;
   let lastTtsEndTime = 0; // กัน echo: ไมค์ได้ยินเสียง TTS ของตัวเอง
+
+  // [30s ACTIVE WINDOW] คุยต่อเนื่องได้ 30 วินาทีหลังเรียก "แทนใจ" — ทุกคำสั่งที่ส่งเข้ามา
+  // จะต่อเวลาใหม่ เงียบครบ 30 วิ จึงกลับโหมด Standby เอง
+  const ACTIVE_WINDOW_MS = 30000;
+  let isActiveMode = false;
+  let activeTimer = null;
 
   if (SpeechRecognition) {
     recognition = new SpeechRecognition();
@@ -1889,14 +2050,16 @@
 
     recognition.onstart = () => {
       // โหมด Standby ไม่ถือว่า "กำลังฟังคำสั่ง" — กันบล็อก idle-dance และไม่เล่นท่าฟังตลอดเวลา
-      const activeListening = !wakeWordEnabled || isAwaitingCommand;
+      const activeListening = !wakeWordEnabled || isActiveMode;
       state.isListening = activeListening;
       if (activeListening) {
         state.lastInteractionTime = Date.now();
         playAnimation(ANIM_STATES.LISTENING, 0.25);
         voiceStatus.textContent = "ได้ยินเรียกแล้วค่ะ พูดคำสั่งได้เลย~";
+        updateTanjAIState("listening", "ฟังอยู่นะคะ พูดคำสั่งได้เลยค่ะ~");
       } else {
         voiceStatus.textContent = "พูดว่า \"แทนใจ\" เพื่อเรียกน้องได้เลยค่ะ";
+        updateTanjAIState("idle", 'Standby — พูดว่า "แทนใจ" เพื่อเรียกน้อง');
       }
       micBtn.classList.add("active");
       waveBox.classList.add("listening");
@@ -1963,7 +2126,7 @@
 
   function resetSpeechUI() {
     // [WAKE-WORD] โหมด Standby คงสถานะฟังอยู่เบื้องหลัง (ไม่ถือว่ากำลังฟังคำสั่ง)
-    const activeListening = wakeWordEnabled && isAwaitingCommand;
+    const activeListening = wakeWordEnabled && isActiveMode;
     state.isListening = activeListening;
     if (!wakeWordEnabled) {
       micBtn.classList.remove("active");
@@ -2009,27 +2172,40 @@
 
   function stopWakeListening() {
     wakeWordEnabled = false;
-    isAwaitingCommand = false;
-    if (pendingCommandTimer) { clearTimeout(pendingCommandTimer); pendingCommandTimer = null; }
+    deactivateActiveWindow(); // [30s ACTIVE WINDOW] ปิดหน้าต่างฟังด้วย (ข้างในมี updateTanjAIState("idle") แล้ว)
     skipWakeRestart = true; // หยุดแบบตั้งใจ — ห้าม onend ดึงกลับขึ้นมา
     try { recognition.stop(); } catch (err) {}
     micBtn.classList.remove("active");
     waveBox.classList.remove("listening");
   }
 
-  // [WAKE-WORD] สมองกลางตีความเสียงที่ได้ยิน: เรียกชื่อ → ตอบรับ → ส่งคำสั่งต่อ
+  // [WAKE-WORD] สมองกลางตีความเสียงที่ได้ยิน: เรียกชื่อ → เปิด Active Window → ส่งคำสั่งต่อ
   function handleWakeWordText(heard) {
     const now = Date.now();
+
+    // [INTERRUPTIBLE TTS] พูดแทรก "หยุด/พอแล้ว" ขณะ AI กำลังพูด → speechSynthesis.cancel() ทันที
+    // (ตรวจก่อน echo-guard เสมอ — ไม่งั้นเสียงที่ AI กำลังพูดจะบล็อกคำสั่งหยุดไปซะเอง)
+    const isSpeakingNow = state.isSpeaking || (window.speechSynthesis && window.speechSynthesis.speaking);
+    if (isSpeakingNow) {
+      if (heard.length <= 15 && TTS_STOP_PATTERN.test(heard)) {
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        state.isSpeaking = false;
+        if (isActiveMode) resetActiveWindowTimer(); // หยุดก็นับเป็นอินเทอแอกชัน — ต่อเวลา Active Window
+        voiceStatus.textContent = "หยุดให้แล้วค่ะ 🤫 พูดต่อได้เลยนะคะ";
+        console.log(`${T_TAG} [TTS] Interrupted by user: "${heard}"`);
+      }
+      return; // กำลังพูดอยู่ (ไม่ใช่คำสั่งหยุด) — ไม่ตีความเสียง กัน echo ของ TTS
+    }
     // กัน echo: เพิ่งหยุดพูด TTS ไม่นาน อย่าเพิ่งตีความเสียงตัวเอง
-    if (state.isSpeaking || now - lastTtsEndTime < 1200) return;
+    if (now - lastTtsEndTime < 1200) return;
 
     const hasWake = WAKE_WORD_PATTERN.test(heard);
 
-    // กรณี 1: เป็นโหมด Standby — รอคำเรียกชื่อเท่านั้น
-    if (!isAwaitingCommand) {
+    // กรณี 1: นอก Active Window — ต้องเรียกชื่อ "แทนใจ" ก่อนเสมอ
+    if (!isActiveMode) {
       if (!hasWake) return; // เงียบๆ ไม่ตอบสนองเสียงรอบข้าง
       state.lastInteractionTime = now;
-      isAwaitingCommand = true;
+      activateActiveWindow(); // [30s ACTIVE WINDOW] เรียกชื่อ → เปิดหน้าต่างฟัง 30 วินาที
       playAnimation(ANIM_STATES.LISTENING, 0.3);
 
       // ตัดคำเรียกออก — เหลือคำสั่งที่พูดต่อทันทีในประโยคเดียว (เช่น "แทนใจ เปิด YouTube")
@@ -2040,44 +2216,151 @@
         const ack = WAKE_ACKS[Math.floor(Math.random() * 2)];
         setTanjAISpeech(`${ack} (กำลังทำ: "${remainder}")`);
         speakThaiText(ack, null, () => { lastTtsEndTime = Date.now(); sendCommandToBackground(remainder); });
-        armCommandTimeout();
         return;
       }
 
-      // เรียกชื่อเปล่าๆ → ตอบรับ "คะ?" แล้วรอฟังคำสั่ง (10 วิ)
+      // เรียกชื่อเปล่าๆ → ตอบรับ "คะ?" แล้วรอฟังคำสั่งภายใน Active Window (30 วิ)
       const ack = WAKE_ACKS[Math.floor(Math.random() * WAKE_ACKS.length)];
       setTanjAISpeech(ack);
       voiceStatus.textContent = "ได้ยินเรียกแล้วค่ะ พูดคำสั่งได้เลย~";
       speakThaiText(ack, null, () => { lastTtsEndTime = Date.now(); });
-      armCommandTimeout();
       return;
     }
 
-    // กรณี 2: ตอบรับแล้ว กำลังรอคำสั่ง
+    // กรณี 2: Active Window เปิดอยู่ — พูดคำสั่งต่อได้เลยโดยไม่ต้องเรียกชื่อ
     state.lastInteractionTime = now;
-    if (pendingCommandTimer) { clearTimeout(pendingCommandTimer); pendingCommandTimer = null; }
-    isAwaitingCommand = false;
+    resetActiveWindowTimer(); // มีคำสั่งเข้ามา → ต่อเวลา 30 วิ ใหม่
 
     const commandText = (hasWake ? heard.replace(WAKE_WORD_PATTERN, " ") : heard)
       .replace(/^[\s,.;:!?]+|[\s,.;:!?]+$/g, "").trim();
     if (!commandText) {
-      setTanjAISpeech("ยังไม่ได้ยินคำสั่งเลยค่ะ เรียก \"แทนใจ\" ใหม่ได้เลยนะคะ 🌸");
+      setTanjAISpeech("ยังไม่ได้ยินคำสั่งเลยค่ะ พูดใหม่ได้เลยนะคะ 🌸");
       return;
     }
     sendCommandToBackground(commandText);
   }
 
-  // นับถอยหลัง 10 วิ — ถ้าเรียกชื่อแล้วเงียบ ให้กลับโหมด Standby เอง
-  function armCommandTimeout() {
-    if (pendingCommandTimer) clearTimeout(pendingCommandTimer);
-    pendingCommandTimer = setTimeout(() => {
-      isAwaitingCommand = false;
-      voiceStatus.textContent = "พูดว่า \"แทนใจ\" เพื่อเรียกน้องได้เลยค่ะ";
-    }, 10000);
+  // [30s ACTIVE WINDOW] เปิดหน้าต่างฟัง 30 วินาที — หลังเรียก "แทนใจ" พูดคำสั่งต่อเนื่องได้
+  // โดยไม่ต้องมี wake word; ทุกคำสั่งจะ reset จับเวลา เงียบครบ 30 วิ จึงกลับ Standby เอง
+  function activateActiveWindow() {
+    isActiveMode = true;
+    updateTanjAIState("listening", "ฟังอยู่นะคะ...");
+    resetActiveWindowTimer();
+    console.log(`${T_TAG} [ActiveWindow] OPEN — เริ่มนับถอยหลัง ${ACTIVE_WINDOW_MS / 1000} วิ`);
+  }
+
+  function resetActiveWindowTimer() {
+    if (activeTimer) { clearTimeout(activeTimer); activeTimer = null; }
+    activeTimer = setTimeout(deactivateActiveWindow, ACTIVE_WINDOW_MS);
+  }
+
+  function deactivateActiveWindow() {
+    if (activeTimer) { clearTimeout(activeTimer); activeTimer = null; }
+    isActiveMode = false;
+    updateTanjAIState("idle");
+    voiceStatus.textContent = "พูดว่า \"แทนใจ\" เพื่อเรียกน้องได้เลยค่ะ";
+    console.log(`${T_TAG} [ActiveWindow] CLOSE — เงียบครบ 30 วิ กลับโหมด Standby`);
+  }
+
+  /**
+   * [SCREEN AWARENESS] getPageContext — ดึงบริบทหน้าเว็บที่ผู้ใช้กำลังดูอยู่
+   * document.title + เนื้อหาข้อความ 1000 ตัวอักษรแรกของ body (clean ช่องว่างซ้ำ)
+   * ครอบ try/catch กันหน้าที่ DOM เข้าถึงไม่ได้ (sandbox/iframe)
+   * @returns {{ title: string, text: string } | null} null ถ้า extract ไม่ได้
+   */
+  function getPageContext() {
+    try {
+      const title = (document.title || "").trim();
+      const rawText = (document.body ? document.body.innerText : "") || "";
+      const cleaned = rawText.replace(/\s+/g, " ").trim().slice(0, 1000);
+      if (!title && !cleaned) return null;
+      return { title, text: cleaned };
+    } catch (e) {
+      console.warn(`${T_TAG} [Screen] getPageContext เกิดข้อผิดพลาด:`, e?.message || e);
+      return null;
+    }
+  }
+
+  // ==========================================================================
+  // [EMOTION ENGINE] Gemini emotion_state -> VRM/ARKit blendshapes (morph targets)
+  // ==========================================================================
+  // alias ใช้ตรง (normalized: lowercase ตัดสัญลักษณ์) กับชื่อ morph จริง — รองรับทั้ง VRM (joy/sorrow/fun),
+  // ARKit (mouthSmileLeft, browInnerUp...) และชื่อกลางอนิเมะ (smile, smirk, sad)
+  const EMOTION_BLENDSHAPES = {
+    happy:      ["smile", "joy", "fun", "cheekraise"],
+    empathetic: ["sad", "sorrow", "concern", "frown", "innerbrowraise", "browinnerup"],
+    teasing:    ["smirk", "smug", "squint", "smileleft", "winkleft"],
+    thinking:   ["browdown", "browfurrow", "browquizzical", "browinnerup"],
+    blushing:   ["blush", "rood"],
+    idle:       []
+  };
+  // keys เฝ้าระวัง (normalized exact match) — มาทำโดย engine กระพริบตา/lip-sync ไม่ให้ expression ขัดกัน
+  const PROTECTED_MORPH_KEYS = [
+    "blink", "eyeblink", "blinkleft", "blinkright", "wink",
+    "a", "i", "u", "e", "o", "aa", "ih", "ee", "oh", "ou",
+    "mouthopen", "moutha", "moutho", "jawopen", "openmouth"
+  ];
+  // แผนงานหัวเรื่อง: mesh -> [{ idx, target }] — อัปเดตโดย setTanjAIExpression และทำ smooth ใน renderLoop
+  let expressionTargetsMap = new Map();
+
+  const normMorph = (k) => String(k || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  /**
+   * setTanjAIExpression(emotion) — เปลี่ยนสีหน้าตามอารมณ์จาก Gemini
+   * - reset อิทธิพล morph ทุกค่าเป็นเป้าหมาย 0 (ยกเว้น keys ที่ engine นั้นใช้)
+   * - ตั้ง เป้าหมาย 1 ให้ morph ที่จับคู่ alias ของ emotion นั้น (lerp ช้าๆ ใน renderLoop)
+   * - รองรับ Procedural model (ไม่มี morph) ด้วยปรับความเฉียบแววใน targetPose
+   * @param {string} emotion "happy" | "empathetic" | "teasing" | "thinking" | "blushing" | null | "idle"
+   */
+  function setTanjAIExpression(emotion) {
+    const emoKey = EMOTION_BLENDSHAPES[emotion] ? emotion : "idle";
+    const aliases = EMOTION_BLENDSHAPES[emoKey].map(normMorph);
+
+    // Procedural fallback: ไม่มี morph targets -> ใช้ความเข้ม blush ของโมดูลแทน (ตั้งและปลดล็อคทันทีได้)
+    if (!glbMorphMeshes.length) {
+      targetPose.blushOpacity = emoKey === "blushing" ? 1.0 : 0.65;
+      return;
+    }
+
+    const nextMap = new Map();
+    glbMorphMeshes.forEach((mesh) => {
+      const dict = mesh.morphTargetDictionary;
+      if (!dict || !mesh.morphTargetInfluences) return;
+      const entries = [];
+      Object.keys(dict).forEach((key) => {
+        const nk = normMorph(key);
+        if (PROTECTED_MORPH_KEYS.includes(nk)) return; // ยกเว้น: engines อื่น
+        const hit = aliases.some((al) => nk.includes(al));
+        entries.push({ idx: dict[key], target: hit ? 1 : 0 });
+      });
+      if (entries.length) nextMap.set(mesh, entries);
+    });
+    expressionTargetsMap = nextMap;
+
+    // blush ทิศทางโปรดเซียนก็อัปเดตตาม (เห้นการเปลี่ยนบนโมดูล เล่าเป็นเลเยอร์บนสุด)
+    targetPose.blushOpacity = emoKey === "blushing" ? 1.0 : 0.65;
+    console.log(`${T_TAG} [Emotion] ${emotion || "idle"} -> ${emoKey}`);
+  }
+
+  /** [SMOOTH] ดัน influence เข้าเป้าหมายเบาๆ ขอบทุกเฟรม (เรียกจาก renderLoop) */
+  function updateExpressionSmoothing() {
+    if (!expressionTargetsMap.size) return;
+    expressionTargetsMap.forEach((entries, mesh) => {
+      const inf = mesh.morphTargetInfluences;
+      if (!inf) return;
+      for (const { idx, target } of entries) {
+        const cur = inf[idx];
+        if (cur === undefined) continue;
+        const next = cur + (target - cur) * 0.14;
+        inf[idx] = Math.abs(target - next) < 0.01 ? target : next;
+      }
+    });
   }
 
   // ส่งคำสั่งไป background.js ประมวลผล (Gemini / Local Intent) แล้วอ่านออกเสียงคำตอบ
-  function sendCommandToBackground(command) {
+  // statusMsg = ข้อความช่วง "คิด" ที่ขึ้นบนกล่อง subtitle (default ใช้กับเสียง / chatbox ส่งข้อความตัวเองมา)
+  function sendCommandToBackground(command, statusMsg = "กำลังคิดอยู่ค่ะ... 🤔") {
+    updateTanjAIState("thinking", statusMsg);
     // ตรวจสอบว่าในคำสั่งมีลิงก์ YouTube หรือไม่
     const ytId = extractYouTubeId(command);
     if (ytId) {
@@ -2086,7 +2369,7 @@
     }
 
     chrome.runtime.sendMessage(
-      { action: "EXECUTE_VOICE_COMMAND", command },
+      { action: "EXECUTE_VOICE_COMMAND", command, pageContext: getPageContext() },
       (response) => {
         if (chrome.runtime.lastError) {
           console.error(`${T_TAG} [BG] ส่งคำสั่งไม่สำเร็จ:`, chrome.runtime.lastError.message);
@@ -2095,16 +2378,33 @@
           return;
         }
         if (response && response.reply) {
-          console.log(`${T_TAG} [BG] ตอบกลับ: action=${response.action}, anim=${response.animation}`);
+          console.log(`${T_TAG} [BG] ตอบกลับ: action=${response.action}, anim=${response.animation}, intent=${response.intent || "legacy"}`);
           setTanjAISpeech(response.reply);
 
           const targetAnim = response.animation || ANIM_STATES.TALKING;
           playAnimation(targetAnim, 0.25);
 
+          // [STATE AURA] งานเบราว์เซอร์ → เขียว, คุย/อธิบาย → ชมพู (ตอนเริ่มพูด)
+          if (isBrowserActionResponse(response)) {
+            updateTanjAIState("browsing", "กำลังทำงานให้ค่ะ... 🌐");
+          }
+
+          // [EMOTION] ขยับ blendshape หน้าตาม emotion_state ก่อนเริ่มพูด (null/generic → กลับ neutral)
+          setTanjAIExpression(response.emotion);
+
           speakThaiText(response.reply, () => {
+            updateTanjAIState("speaking", response.reply);
             playAnimation(targetAnim, 0.2);
           }, () => {
+            // [EMOTION] พูดจบ → คืนหน้า neutral
+            setTanjAIExpression("idle");
             lastTtsEndTime = Date.now(); // [WAKE-WORD] ให้ echo-guard รู้ว่าเพิ่งพูดจบ
+            // [30s ACTIVE WINDOW] หน้าต่างยังเปิด → กลับโหมดฟัง (คุยต่อได้) แทน idle
+            if (isActiveMode) {
+              updateTanjAIState("listening", "ฟังอยู่นะคะ พูดต่อได้เลยค่ะ~");
+            } else {
+              updateTanjAIState("idle");
+            }
             setTimeout(() => {
               if (!state.isSpeaking && !state.isListening) {
                 playAnimation(ANIM_STATES.IDLE_DANCE, 0.4);
@@ -2129,24 +2429,59 @@
     triggerSpeechRecognition();
   });
 
+  // [DIRECT TEXT COMMAND] Chatbox — พิมพ์สั่งแทนใจโดยไม่ต้องใช้เสียง
+  // Enter → ใช้ข้อความ + เคลียร์ช่องทันที → updateTanjAIState('thinking') →
+  // ดึง pageContext ปัจจุบัน → ส่งโครงสร้าง payload เดียวกับเส้นทาง STT (EXECUTE_VOICE_COMMAND)
+  if (chatInput) {
+    chatInput.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      e.stopPropagation(); // กัน hotkey ของหน้าเว็บถูกเรียกจากการพิมพ์ในช่องของเรา
+      const command = chatInput.value.trim();
+      if (!command) return; // ช่องว่าง: ไม่ส่ง ไม่ขยับสถานะ
+      chatInput.value = "";
+      chatInput.blur();
+      state.lastInteractionTime = Date.now();
+      updateTanjAIState("thinking", "กำลังคิดน้า...");
+      // sendCommandToBackground ส่ง { action: "EXECUTE_VOICE_COMMAND", command, pageContext: getPageContext() }
+      // = payload โครงสร้างเดียวกับผลลัพธ์ Speech-to-Text พอดี
+      sendCommandToBackground(command, "กำลังคิดน้า...");
+    });
+  }
+
   // Action Chips Click
   document.querySelectorAll(".tanjai-chip[data-cmd]").forEach((chip) => {
     chip.addEventListener("click", (e) => {
       const cmd = e.target.getAttribute("data-cmd");
       state.lastInteractionTime = Date.now();
       playAnimation(ANIM_STATES.TALKING, 0.25);
+      updateTanjAIState("thinking", "กำลังทำตามคำสั่งค่ะ...");
 
       chrome.runtime.sendMessage(
-        { action: "EXECUTE_VOICE_COMMAND", command: cmd },
+        { action: "EXECUTE_VOICE_COMMAND", command: cmd, pageContext: getPageContext() },
         (res) => {
           if (res?.reply) {
             setTanjAISpeech(res.reply);
             const targetAnim = res.animation || ANIM_STATES.TALKING;
             playAnimation(targetAnim, 0.25);
 
+            if (isBrowserActionResponse(res)) {
+              updateTanjAIState("browsing", "กำลังทำงานให้ค่ะ... 🌐");
+            }
+
+            // [EMOTION] ขยับ blendshape หน้าตาม emotion ของ chip ก่อนพูด (res.emotion)
+            setTanjAIExpression(res.emotion);
+
             speakThaiText(res.reply, () => {
+              updateTanjAIState("speaking", res.reply);
               playAnimation(targetAnim, 0.2);
             }, () => {
+              setTanjAIExpression("idle"); // [EMOTION] พูดจบ → คืนหน้า neutral
+              if (isActiveMode) {
+                updateTanjAIState("listening", "ฟังอยู่นะคะ พูดต่อได้เลยค่ะ~");
+              } else {
+                updateTanjAIState("idle");
+              }
               setTimeout(() => {
                 if (!state.isSpeaking && !state.isListening) {
                   playAnimation(ANIM_STATES.IDLE_DANCE, 0.4);

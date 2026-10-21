@@ -541,6 +541,110 @@
   outline: none;
 }
 
+/* 3.3 Live Subtitle Box (กล่องสถานะโปร่งใสใต้ฐานตัวละคร 3D) */
+/* พื้นหลังดำ 60% + ตัวอักษรขาว + ขอบมน — สีขอบเปลี่ยนตามสถานะการทำงาน */
+.tanjai-subtitle {
+  position: relative;
+  z-index: 2;
+  width: 92%;
+  max-width: 280px;
+  margin-top: 10px;
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+  word-wrap: break-word;
+  border-radius: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  pointer-events: none; /* ไม่บังการคลิกบนหน้าเว็บ */
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.3s ease, transform 0.3s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+/* แสดงกล่อง (ควบคุมผ่านคลาส .visible จาก updateTanjAIState ใน content.js) */
+.tanjai-subtitle.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* [State Borders] ขอบเรืองแสงตามสถานะ — ฟ้าฟัง / ส้มคิด / ชมพูพูด / เขียวทำงาน */
+.tanjai-subtitle.state-listening {
+  border-color: #00E5FF;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.45), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.tanjai-subtitle.state-thinking {
+  border-color: #FFAA00;
+  box-shadow: 0 0 12px rgba(255, 170, 0, 0.45), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.tanjai-subtitle.state-speaking {
+  border-color: #FF7AB8;
+  animation: tanjai-subtitle-speak 1.4s ease-in-out infinite;
+}
+
+.tanjai-subtitle.state-browsing {
+  border-color: #00FF88;
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.45), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.tanjai-subtitle.state-idle {
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+/* จังหวะเต้นเบาๆ ของขอบขณะพูด (Lip-sync feel) */
+@keyframes tanjai-subtitle-speak {
+  0%, 100% { box-shadow: 0 0 10px rgba(255, 122, 184, 0.4), 0 4px 14px rgba(0, 0, 0, 0.35); }
+  50% { box-shadow: 0 0 16px rgba(255, 122, 184, 0.65), 0 4px 14px rgba(0, 0, 0, 0.35); }
+}
+
+/* 3.4 Direct Text Command (Chatbox) — กรอบพิมพ์คำสั่งโปร่งแสง อยู่ต่อจากกล่อง subtitle */
+/* Glassmorphism + ตัวอักษรขาว วางใต้กล่อง subtitle พอดี */
+.tanjai-chat-input {
+  position: relative;
+  z-index: 2;
+  width: 92%;
+  max-width: 280px;
+  margin-top: 8px;
+  padding: 9px 14px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255, 255, 255, 0.30);
+  border-radius: 14px;
+  color: #FFFFFF;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  outline: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.30);
+  pointer-events: auto; /* CRITICAL: คลิก/โฟกัส/พิมพ์ได้เสมอ แม้ #tanjai-root ตั้ง pointer-events: none */
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.tanjai-chat-input::placeholder {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.tanjai-chat-input:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 154, 77, 0.55);
+}
+
+.tanjai-chat-input:focus {
+  background: rgba(0, 0, 0, 0.55);
+  border-color: #FF9A4D;
+  box-shadow: 0 0 12px rgba(255, 154, 77, 0.45), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
 /* 4. Dance Musical Notes Indicator */
 .tanjai-musical-notes {
   position: absolute;
